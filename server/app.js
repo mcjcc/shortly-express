@@ -109,7 +109,7 @@ app.post('/signup',
     });
 });
 
-app.post('/login', 
+app.post('/login',
 
 (req, res, next) => {
   var username = req.body.username.toString();
@@ -121,8 +121,11 @@ app.post('/login',
       if (result) {
         var password = result.password;
         var salt = result.salt;
+        var userId = result.id;
         if ( models.Users.compare(attemptedPassword, password, salt) ) {
           console.log('password verified!');
+          //MIDDLEWARE HERE? FOR SESSION CREATION
+
           res.redirect('/');
         } else { // password supplied is wrong
           console.log('password not verified, redirecting to /login');

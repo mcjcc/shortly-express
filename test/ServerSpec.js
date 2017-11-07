@@ -277,7 +277,7 @@ describe('', function() {
     });
   });
 
-  xdescribe('Sessions Schema:', function() {
+  describe('Sessions Schema:', function() {
     it('contains a sessions table', function(done) {
       var queryString = 'SELECT * FROM sessions';
       db.query(queryString, function(err, results) {
@@ -325,7 +325,7 @@ describe('', function() {
     });
   });
 
-  xdescribe('Express Middleware', function() {
+  describe('Express Middleware', function() {
     var cookieParser = require('../server/middleware/cookieParser.js');
     var createSession = require('../server/middleware/auth.js').createSession;
 
@@ -402,13 +402,17 @@ describe('', function() {
         var requestWithoutCookie = httpMocks.createRequest();
         var response = httpMocks.createResponse();
 
+        // first request has no session
         createSession(requestWithoutCookie, response, function() {
           var cookie = response.cookies.shortlyid.value;
+          //the 
           var secondResponse = httpMocks.createResponse();
           var requestWithCookies = httpMocks.createRequest();
-          requestWithCookies.cookies.shortlyid = cookie;
-
+          requestWithCookies.cookies.shortlyid = cookie; 
+          // first request has a session now
+          //SO THERE IS NOTHING DONE WITH THE REQ.SESSION HERE
           createSession(requestWithCookies, secondResponse, function() {
+            // second request's session shoudl be the same as the first request's session
             var session = requestWithCookies.session;
             expect(session).to.be.an('object');
             expect(session.hash).to.exist;
