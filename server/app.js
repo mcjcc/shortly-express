@@ -77,8 +77,71 @@ app.post('/links',
 /************************************************************/
 // Write your authentication routes here
 /************************************************************/
+app.post('/signup', 
+  // if user alreayd exists, we dont create the user and respond with an error message saying the username is taken
+  // if it deosnt exist, we create it!
+  // res.status(201).send('Hello');
+  
+(req, res, next) => {
+// store the request body info in a variable
+// call models.Users.create with the user info as a param
+// on success respond with appropriate header/body
+  var username = req.body.username.toString();
+  var password = req.body.password.toString();
+  // console.log(req.query);
+  console.log('Username: ', username, 'Password ', password);
 
+  models.Users.create({username, password})
+    .then(results => {
+      console.log('user created!');
+      res.status(201).redirect('/');
+    })
+    .error(error => {
+      console.log('REACHED THE ERROR BLOCK', error.code);
 
+      if (error.code.toString() === 'ER_DUP_ENTRY') {
+        res.redirect('/signup');
+      }
+      // res.status(500).send(error);
+    })
+    .catch(user => {
+      res.status(200).send('it got to the catch 200');
+    });
+});
+
+app.post('/login', 
+
+(req, res, next) => {
+  var username = req.body.username.toString();
+  var attemptedPassword = req.body.password.toString();
+  
+  models.Users.get({username})
+    .then(result => {
+      console.log('RETURN VALUE FROM DB QUERY', result);
+      if (result) {
+        var password = result.password;
+        var salt = result.salt;
+        if ( models.Users.compare(attemptedPassword, password, salt) ) {
+          console.log('password verified!');
+          res.redirect('/');
+        } else { // password supplied is wrong
+          console.log('password not verified, redirecting to /login');
+          res.redirect('/login');
+        }
+            
+      } else { // if user wasnt found
+        console.log('USER WAS NOT FOUND!');
+        res.redirect('/login');
+      }
+    });
+/// take request info and search for the user in the user database
+// if user exists, check if passwords match
+  // if passwords match, redirect to '/',
+  // if passwords dont match, keep them at '/login' page
+// if user doesnt exist, keep them at '/login' page
+  
+}
+);
 
 /************************************************************/
 // Handle the code parameter route last - if all other routes fail
