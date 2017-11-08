@@ -3,7 +3,7 @@ const parseCookies = (req, res, next) => {
   // request have the headers property of cookie and we have to parse the cookie out and store it in a cookies property in the request 
 
     
-  req.cookies = {};
+  req.cookies = req.cookies || {};
 
   if (req.headers.cookie) {
     var cookieString = req.headers.cookie;

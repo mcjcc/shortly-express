@@ -14,12 +14,15 @@ app.use(partials());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
+//writing an app use that uses auth.js file as middleware. It will check req for session in order to save it, for all requests 
+app.use(Auth.createSession);
+
 
 
 
 app.get('/', 
 (req, res) => {
-  res.render('index');
+  res.render('index');  
 });
 
 app.get('/create', 
@@ -125,6 +128,12 @@ app.post('/login',
         if ( models.Users.compare(attemptedPassword, password, salt) ) {
           console.log('password verified!');
           //MIDDLEWARE HERE? FOR SESSION CREATION
+          
+          // WE HAVE TO FIND THE REQ.SESSIONS OBJECT HERE AND THEN UPDATE IT IN THE TABLES WITH THE USERID?
+          console.log('USER HAS VERIFIED PASSWORD, AND NEEDS SESSION TO HAVE USER INFO UPDATED');
+
+          console.log('REQ SESSION FOR LOGGED IN', req.session);
+
 
           res.redirect('/');
         } else { // password supplied is wrong
