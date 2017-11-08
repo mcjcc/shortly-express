@@ -22,64 +22,88 @@ app.use(Auth.createSession);
 
 app.get('/', 
 (req, res) => {
-  res.render('index');  
+  if (models.Sessions.isLoggedIn(req.session)) {
+    res.render('index');  
+  } else {
+    res.redirect('/login');
+  }
+});
+
+app.get('/login',
+(req, res) => {
+  res.render('login');
 });
 
 app.get('/create', 
 (req, res) => {
-  res.render('index');
+  if (models.Sessions.isLoggedIn(req.session)) {
+    res.render('index');  
+  } else {
+    res.redirect('/login');
+  }
 });
 
 app.get('/links', 
 (req, res, next) => {
-  models.Links.getAll()
+  if (models.Sessions.isLoggedIn(req.session)) {
+    models.Links.getAll()
     .then(links => {
       res.status(200).send(links);
     })
     .error(error => {
       res.status(500).send(error);
     });
+  } else {
+    res.redirect('/login'); 
+  }
 });
 
 app.post('/links', 
 (req, res, next) => {
-  var url = req.body.url;
-  if (!models.Links.isValidUrl(url)) {
-    // send back a 404 if link is not valid
-    return res.sendStatus(404);
-  }
+  if (models.Sessions.isLoggedIn(req.session)) {
+    var url = req.body.url;
+    if (!models.Links.isValidUrl(url)) {
+      // send back a 404 if link is not valid
+      return res.sendStatus(404);
+    }
 
-  return models.Links.get({ url })
-    .then(link => {
-      if (link) {
+    return models.Links.get({ url })
+      .then(link => {
+        if (link) {
+          throw link;
+        }
+        return models.Links.getUrlTitle(url);
+      })
+      .then(title => {
+        return models.Links.create({
+          url: url,
+          title: title,
+          baseUrl: req.headers.origin
+        });
+      })
+      .then(results => {
+        return models.Links.get({ id: results.insertId });
+      })
+      .then(link => {
         throw link;
-      }
-      return models.Links.getUrlTitle(url);
-    })
-    .then(title => {
-      return models.Links.create({
-        url: url,
-        title: title,
-        baseUrl: req.headers.origin
+      })
+      .error(error => {
+        res.status(500).send(error);
+      })
+      .catch(link => {
+        res.status(200).send(link);
       });
-    })
-    .then(results => {
-      return models.Links.get({ id: results.insertId });
-    })
-    .then(link => {
-      throw link;
-    })
-    .error(error => {
-      res.status(500).send(error);
-    })
-    .catch(link => {
-      res.status(200).send(link);
-    });
+  } else {
+    res.redirect('/login');
+  }
 });
 
 /************************************************************/
 // Write your authentication routes here
 /************************************************************/
+app.get('/signup', (req, res, next) =>{
+  res.render('signup');
+});
 app.post('/signup', 
   // if user alreayd exists, we dont create the user and respond with an error message saying the username is taken
   // if it deosnt exist, we create it!
@@ -97,7 +121,12 @@ app.post('/signup',
   models.Users.create({username, password})
     .then(results => {
       console.log('user created!');
+      return models.Sessions.update({hash: req.session.hash}, {userId: results.insertId});
+    })
+    .then(result => {
+      
       res.status(201).redirect('/');
+         
     })
     .error(error => {
       console.log('REACHED THE ERROR BLOCK', error.code);
@@ -126,16 +155,23 @@ app.post('/login',
         var salt = result.salt;
         var userId = result.id;
         if ( models.Users.compare(attemptedPassword, password, salt) ) {
-          console.log('password verified!');
-          //MIDDLEWARE HERE? FOR SESSION CREATION
-          
           // WE HAVE TO FIND THE REQ.SESSIONS OBJECT HERE AND THEN UPDATE IT IN THE TABLES WITH THE USERID?
-          console.log('USER HAS VERIFIED PASSWORD, AND NEEDS SESSION TO HAVE USER INFO UPDATED');
-
+  
+          
           console.log('REQ SESSION FOR LOGGED IN', req.session);
+        
+          console.log('USER HAS VERIFIED PASSWORD, AND NEEDS SESSION TO HAVE USER INFO UPDATED');
+          // Auth.updateSessionWithUser(req, res, userId, function() {
+  
+          models.Sessions.update({hash: req.session.hash}, {userId: userId}).then(result => {
+            res.redirect('/');
+         
+          });
+
+          // }); 
 
 
-          res.redirect('/');
+          // res.redirect('/');
         } else { // password supplied is wrong
           console.log('password not verified, redirecting to /login');
           res.redirect('/login');
@@ -154,6 +190,18 @@ app.post('/login',
   
 }
 );
+
+app.get('/logout', (req, res, next) => {
+  
+  res.cookie('shortlyid', null);
+  models.Sessions.delete({hash: req.session.hash}).then( result => {
+    console.log('INSIDE THE DELETE PROMISE', result);
+    req.session = {};
+    res.redirect('/login');
+  });
+
+
+});
 
 /************************************************************/
 // Handle the code parameter route last - if all other routes fail

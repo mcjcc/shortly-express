@@ -23,17 +23,16 @@ module.exports.createSession = (req, res, next) => {
         .then(result => {
           console.log('THE SESSION OBJECT AFTER CHECKING FOR SESSION USING COOKIE', result);
           console.log('HAS SHORTLY ID COOKIE AND ASSOCIATED SESSION');
-          // if result exists, we update the session record with the associated user id
+          // if result exists, we update the session object with the associated user id
           if (result) {
             req.session = {
               hash: result.hash,
               userId: null,
-              user: {
-              }
+              user: null
             };
             if (result.userId) {
               req.session.userId = result.userId;
-              req.session.user.username = result.user.username;
+              req.session.user = {username: result.user.username};
             }
 
             res.cookies = {
@@ -56,9 +55,7 @@ module.exports.createSession = (req, res, next) => {
               req.session = {
                 hash: result.hash,
                 userId: result.userId,
-                user: {
-                  username: null,
-                }
+                user: null
               };
               res.cookies = {};     
               // assign session to a user somehow
@@ -84,9 +81,7 @@ module.exports.createSession = (req, res, next) => {
         req.session = {
           hash: result.hash,
           userId: result.userId,
-          user: {
-            username: null,
-          }
+          user: null
         };
         // res.cookies = {};     
         // assign session to a user somehow
@@ -106,5 +101,19 @@ module.exports.createSession = (req, res, next) => {
 /************************************************************/
 // Add additional authentication middleware functions below
 /************************************************************/
+module.exports.updateSessionWithUser = (req, res, user, next) =>{
+  // when a user goes to the /login page
+  // session is created with no user_id
+  // after user succesfully logs in
+  // session is associated with the user_id
+  var hash = req.session.hash;
+  
+  models.Sessions.update({hash: hash}, {userId: user}).then(result => {
+    next();
+  });
+  // inputs are a req obj, res obj, next callback
 
+  
 
+  // outputs is a session record is updated with the user_id
+};
